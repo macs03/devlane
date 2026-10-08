@@ -1,5 +1,5 @@
+import { useMemo } from 'react';
 import {
-  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -8,31 +8,45 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AnalysisLoadingState } from '@/components/analysis/AnalysisLoadingState';
+import { AnalysisStatCard } from '@/components/analysis/AnalysisStatCard';
+import { AnalysisSummaryCard } from '@/components/analysis/AnalysisSummaryCard';
 import { useSleepAnalysis } from '@/hooks/useSleepAnalysis';
 import { colors } from '@/theme/colors';
+import { formatLastWeekAnalysisRange } from '@/utils/lastWeekEntries';
+import { computeSleepKeyStats } from '@/utils/sleepKeyStats';
 
 export default function AnalysisScreen() {
-  const { status, analysis, error, entryCount, refresh } = useSleepAnalysis();
+  const { status, analysis, error, entryCount, lastWeekEntries, refresh } = useSleepAnalysis();
 
-  const isLoading = status === 'loading' || status === 'idle';
+  const keyStats = useMemo(() => computeSleepKeyStats(lastWeekEntries), [lastWeekEntries]);
+  const rangeLabel = useMemo(
+    () => formatLastWeekAnalysisRange(lastWeekEntries),
+    [lastWeekEntries],
+  );
+
+  const isEmptyWeek = entryCount === 0;
+  const isLoading = !isEmptyWeek && (status === 'loading' || status === 'idle');
+  const showResults = status === 'success' && analysis !== null && keyStats !== null;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Weekly analysis</Text>
-        <Text style={styles.subtitle}>
-          Based on {entryCount} {entryCount === 1 ? 'entry' : 'entries'} from the last 7 days of
-          your log
-        </Text>
+        <Text style={styles.title}>Analysis</Text>
+        <View style={styles.titleDivider} />
 
-        {isLoading ? (
-          <View style={styles.centered}>
-            <ActivityIndicator size="large" color={colors.brandIndigo} />
-            <Text style={styles.loadingText}>Analyzing sleep patterns…</Text>
+        {isEmptyWeek ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyTitle}>No entries this week</Text>
+            <Text style={styles.emptyMessage}>
+              Log sleep in the last 7 days to see AI analysis and key stats.
+            </Text>
           </View>
         ) : null}
+
+        {isLoading && entryCount > 0 ? <AnalysisLoadingState entryCount={entryCount} /> : null}
 
         {status === 'error' && error ? (
           <View style={styles.errorCard}>
@@ -48,30 +62,39 @@ export default function AnalysisScreen() {
           </View>
         ) : null}
 
-        {status === 'success' && analysis ? (
+        {showResults ? (
           <View style={styles.content}>
-            <View style={styles.summaryCard}>
-              <Text style={styles.sectionLabel}>Summary</Text>
-              <Text style={styles.summaryText}>{analysis.summary}</Text>
+            <Text style={styles.sectionLabel}>Summary</Text>
+            <AnalysisSummaryCard
+              metaLabel={rangeLabel ? `AI · ${rangeLabel}` : 'AI'}
+              summary={analysis.summary}
+            />
+
+            <Text style={[styles.sectionLabel, styles.statsSectionLabel]}>Key stats</Text>
+            <View style={styles.statsList}>
+              <AnalysisStatCard
+                label="Longest sleep"
+                value={keyStats.longest.duration}
+                subtext={keyStats.longest.dateLabel}
+              />
+              <AnalysisStatCard
+                label="Shortest sleep"
+                value={keyStats.shortest.duration}
+                subtext={keyStats.shortest.dateLabel}
+              />
+              <AnalysisStatCard
+                label="Avg duration"
+                value={keyStats.avgDuration}
+                subtext="this week"
+              />
+              {keyStats.avgBedtime ? (
+                <AnalysisStatCard
+                  label="Avg bedtime"
+                  value={keyStats.avgBedtime}
+                  subtext="this week"
+                />
+              ) : null}
             </View>
-            {analysis.insights.length > 0 ? (
-              <View style={styles.insightsCard}>
-                <Text style={styles.sectionLabel}>Insights</Text>
-                {analysis.insights.map((insight, index) => (
-                  <View key={`${index}-${insight.slice(0, 24)}`} style={styles.insightRow}>
-                    <Text style={styles.bullet}>•</Text>
-                    <Text style={styles.insightText}>{insight}</Text>
-                  </View>
-                ))}
-              </View>
-            ) : null}
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Refresh analysis"
-              onPress={refresh}
-              style={({ pressed }) => [styles.secondaryButton, pressed && styles.secondaryButtonPressed]}>
-              <Text style={styles.secondaryButtonText}>Refresh</Text>
-            </Pressable>
           </View>
         ) : null}
       </ScrollView>
@@ -90,72 +113,51 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: colors.textPrimary,
+    fontSize: 34,
+    fontFamily: 'Georgia',
+    fontWeight: '400',
+    color: colors.analysisTitle,
     marginTop: 8,
   },
-  subtitle: {
-    fontSize: 15,
-    color: colors.textSecondary,
-    marginTop: 6,
-    marginBottom: 24,
-  },
-  centered: {
-    alignItems: 'center',
-    paddingVertical: 48,
-    gap: 12,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: colors.textSecondary,
+  titleDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.divider,
+    marginTop: 16,
+    marginBottom: 20,
   },
   content: {
-    gap: 16,
+    gap: 12,
   },
-  summaryCard: {
-    backgroundColor: colors.accentLavender,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: colors.accentLavenderBorder,
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.8,
+    color: colors.analysisSectionLabel,
+    textTransform: 'uppercase',
   },
-  insightsCard: {
+  statsSectionLabel: {
+    marginTop: 8,
+  },
+  statsList: {
+    gap: 12,
+  },
+  emptyCard: {
     backgroundColor: colors.fieldBackground,
     borderRadius: 16,
-    padding: 16,
+    padding: 20,
     borderWidth: 1,
     borderColor: colors.fieldBorder,
   },
-  sectionLabel: {
-    fontSize: 13,
+  emptyTitle: {
+    fontSize: 17,
     fontWeight: '600',
-    color: colors.accentMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 10,
-  },
-  summaryText: {
-    fontSize: 16,
-    lineHeight: 24,
     color: colors.textPrimary,
-  },
-  insightRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
     marginBottom: 8,
   },
-  bullet: {
-    fontSize: 16,
+  emptyMessage: {
+    fontSize: 15,
     lineHeight: 22,
-    color: colors.brandIndigo,
-  },
-  insightText: {
-    flex: 1,
-    fontSize: 16,
-    lineHeight: 22,
-    color: colors.textPrimary,
+    color: colors.textSecondary,
   },
   errorCard: {
     backgroundColor: colors.fieldBackground,
@@ -190,18 +192,5 @@ const styles = StyleSheet.create({
     color: colors.background,
     fontSize: 16,
     fontWeight: '600',
-  },
-  secondaryButton: {
-    alignSelf: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  secondaryButtonPressed: {
-    opacity: 0.7,
-  },
-  secondaryButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.brandIndigo,
   },
 });

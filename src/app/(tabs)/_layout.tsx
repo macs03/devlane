@@ -21,6 +21,7 @@ export default function TabLayout() {
         name="analysis"
         options={{
           title: 'Analysis',
+          headerShown: false,
           tabBarIcon: ({ color }) => <FontAwesome size={28} name="bar-chart" color={color} />,
         }}
       />

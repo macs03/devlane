@@ -42,3 +42,23 @@ export function getLastWeekDateRange(entries: SleepEntry[]): { start: string; en
   const end = lastWeek[lastWeek.length - 1].date;
   return { start, end };
 }
+
+function formatAnalysisRangePart(dateIso: string): string {
+  const [year, monthIndex, day] = dateIso.split('-').map(Number);
+  const date = new Date(year, monthIndex - 1, day);
+  const monthLabel = date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+  return `${monthLabel} ${day}`;
+}
+
+export function formatLastWeekAnalysisRange(entries: SleepEntry[]): string | null {
+  const range = getLastWeekDateRange(entries);
+  if (!range) {
+    return null;
+  }
+  if (range.start === range.end) {
+    return formatAnalysisRangePart(range.start);
+  }
+  const startPart = formatAnalysisRangePart(range.start);
+  const endDay = Number(range.end.split('-')[2]);
+  return `${startPart} – ${endDay}`;
+}
