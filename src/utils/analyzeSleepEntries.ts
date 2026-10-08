@@ -56,17 +56,24 @@ function parseAnalysisResponse(text: string): SleepAnalysis {
     throw new SleepAnalysisError('Could not parse analysis response from the API.');
   }
 
+  const candidate = parsed as SleepAnalysis;
   if (
     typeof parsed !== 'object' ||
     parsed === null ||
-    typeof (parsed as SleepAnalysis).summary !== 'string' ||
-    !Array.isArray((parsed as SleepAnalysis).insights) ||
-    !(parsed as SleepAnalysis).insights.every((item) => typeof item === 'string')
+    typeof candidate.summary !== 'string' ||
+    !Array.isArray(candidate.insights) ||
+    !candidate.insights.every((item) => typeof item === 'string') ||
+    typeof candidate.actionableTip !== 'string' ||
+    candidate.actionableTip.trim().length === 0
   ) {
     throw new SleepAnalysisError('Analysis response did not match the expected shape.');
   }
 
-  return parsed as SleepAnalysis;
+  return {
+    summary: candidate.summary,
+    insights: candidate.insights,
+    actionableTip: candidate.actionableTip.trim(),
+  };
 }
 
 export async function analyzeSleepEntries(entries: SleepEntry[]): Promise<SleepAnalysis> {
@@ -84,9 +91,11 @@ export async function analyzeSleepEntries(entries: SleepEntry[]): Promise<SleepA
       {
         role: 'user',
         content: `You are helping a parent track their baby's sleep. Analyze the following sleep log entries from the most recent 7-day window. Respond with JSON only, no markdown, using this exact shape:
-{"summary":"one short paragraph","insights":["bullet 1","bullet 2","bullet 3"]}
+{"summary":"one short paragraph","insights":["bullet 1","bullet 2","bullet 3"],"actionableTip":"one concrete recommendation"}
 
 Provide 2–4 practical insights about patterns, total sleep, naps vs night sleep, and anything notable from notes. Be supportive and concise.
+
+For actionableTip: write one or two short sentences the parent can act on this week (bedtime routine, nap timing, consistency, etc.). Use an imperative or clear action verb. Be supportive; do not give medical diagnoses.
 
 Sleep entries:
 ${entriesBlock}`,

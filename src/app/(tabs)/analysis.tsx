@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AnalysisLoadingState } from '@/components/analysis/AnalysisLoadingState';
 import { AnalysisStatCard } from '@/components/analysis/AnalysisStatCard';
 import { AnalysisSummaryCard } from '@/components/analysis/AnalysisSummaryCard';
+import { AnalysisTipCard } from '@/components/analysis/AnalysisTipCard';
 import { useSleepAnalysis } from '@/hooks/useSleepAnalysis';
 import { colors } from '@/theme/colors';
 import { formatLastWeekAnalysisRange } from '@/utils/lastWeekEntries';
@@ -69,6 +70,9 @@ export default function AnalysisScreen() {
               metaLabel={rangeLabel ? `AI · ${rangeLabel}` : 'AI'}
               summary={analysis.summary}
             />
+
+            <Text style={[styles.sectionLabel, styles.tipSectionLabel]}>Try this</Text>
+            <AnalysisTipCard tip={analysis.actionableTip} />
 
             <Text style={[styles.sectionLabel, styles.statsSectionLabel]}>Key stats</Text>
             <View style={styles.statsList}>
@@ -134,6 +138,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     color: colors.analysisSectionLabel,
     textTransform: 'uppercase',
+  },
+  tipSectionLabel: {
+    marginTop: 8,
   },
   statsSectionLabel: {
     marginTop: 8,

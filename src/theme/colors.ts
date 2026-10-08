@@ -30,4 +30,7 @@ export const colors = {
   skeletonOnDark: 'rgba(255, 255, 255, 0.35)',
   skeletonOnLight: '#E0E0E6',
   skeletonSummaryCard: '#6B6B75',
+  analysisTipCard: '#F8F4E8',
+  analysisTipBorder: '#E8E0C8',
+  analysisTipText: '#3D3A32',
 } as const;

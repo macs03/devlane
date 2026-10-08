@@ -73,6 +73,12 @@ export function AnalysisLoadingState({ entryCount }: AnalysisLoadingStateProps) 
         <SkeletonLine width="88%" tone="dark" />
       </View>
 
+      <View style={styles.tipSkeleton}>
+        <SkeletonLine width="100%" tone="light" />
+        <SkeletonLine width="92%" tone="light" />
+        <SkeletonLine width="78%" tone="light" />
+      </View>
+
       <View style={styles.statSkeleton}>
         <SkeletonLine width="38%" tone="light" />
         <SkeletonLine width="55%" tone="light" />
@@ -117,6 +123,15 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingHorizontal: 20,
     paddingVertical: 24,
+    gap: 12,
+  },
+  tipSkeleton: {
+    backgroundColor: colors.analysisTipCard,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.analysisTipBorder,
+    paddingHorizontal: 20,
+    paddingVertical: 22,
     gap: 12,
   },
   statSkeleton: {
