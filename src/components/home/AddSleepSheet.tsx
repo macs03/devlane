@@ -19,7 +19,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { SleepEntry } from '@/types/sleepEntry';
 import { colors } from '@/theme/colors';
 import {
-  dateToIsoString,
+  type AddSleepFormField,
+  type AddSleepFormFieldErrors,
+  validateAddSleepForm,
+} from '@/validation/addSleepForm';
+import {
   dateToTimeString,
   formatSheetDate,
   formatSleepDuration,
@@ -56,32 +60,61 @@ type FieldRowProps = {
   label: string;
   value: string;
   active: boolean;
+  error?: string;
   onPress: () => void;
 };
 
-function FieldRow({ label, value, active, onPress }: FieldRowProps) {
+function FieldRow({ label, value, active, error, onPress }: FieldRowProps) {
   return (
     <View style={styles.fieldBlock}>
       <Text style={styles.fieldLabel}>{label}</Text>
       <Pressable
         accessibilityRole="button"
         onPress={onPress}
-        style={[styles.fieldInput, active && styles.fieldInputActive]}>
+        style={[
+          styles.fieldInput,
+          active && styles.fieldInputActive,
+          error ? styles.fieldInputError : null,
+        ]}>
         <Text style={styles.fieldValue}>{value}</Text>
         <FontAwesome name="chevron-down" size={12} color={colors.textSecondary} />
       </Pressable>
+      {error ? <Text style={styles.fieldError}>{error}</Text> : null}
     </View>
   );
+}
+
+function pickerFieldToFormField(field: PickerField): AddSleepFormField {
+  if (field === 'sleep') {
+    return 'sleepTime';
+  }
+  if (field === 'wake') {
+    return 'wakeTime';
+  }
+  return 'date';
 }
 
 export function AddSleepSheet({ visible, onClose, onSubmit }: AddSleepSheetProps) {
   const insets = useSafeAreaInsets();
   const [form, setForm] = useState<FormState>(createInitialFormState);
   const [activePicker, setActivePicker] = useState<PickerField | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<AddSleepFormFieldErrors>({});
+
+  const clearFieldError = (field: AddSleepFormField) => {
+    setFieldErrors((current) => {
+      if (!current[field]) {
+        return current;
+      }
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+  };
 
   const handleClose = () => {
     setForm(createInitialFormState());
     setActivePicker(null);
+    setFieldErrors({});
     onClose();
   };
 
@@ -101,6 +134,8 @@ export function AddSleepSheet({ visible, onClose, onSubmit }: AddSleepSheetProps
     } else if (!value) {
       return;
     }
+    clearFieldError(pickerFieldToFormField(field));
+    clearFieldError('duration');
     setForm((current) => {
       if (field === 'date') {
         return { ...current, date: value };
@@ -113,13 +148,15 @@ export function AddSleepSheet({ visible, onClose, onSubmit }: AddSleepSheetProps
   };
 
   const handleSubmit = () => {
-    const trimmedNotes = form.notes.trim();
+    const validation = validateAddSleepForm(form);
+    if (!validation.success) {
+      setFieldErrors(validation.errors);
+      return;
+    }
+
     const entry: SleepEntry = {
       id: String(Date.now()),
-      date: dateToIsoString(form.date),
-      startTime,
-      endTime,
-      ...(trimmedNotes ? { notes: trimmedNotes } : {}),
+      ...validation.data,
     };
     onSubmit(entry);
     handleClose();
@@ -158,6 +195,7 @@ export function AddSleepSheet({ visible, onClose, onSubmit }: AddSleepSheetProps
               label="DATE"
               value={formatSheetDate(form.date)}
               active={activePicker === 'date'}
+              error={fieldErrors.date}
               onPress={() => setActivePicker('date')}
             />
             {showIosInlinePicker && activePicker === 'date' ? (
@@ -165,6 +203,7 @@ export function AddSleepSheet({ visible, onClose, onSubmit }: AddSleepSheetProps
                 value={form.date}
                 mode="date"
                 display="spinner"
+                maximumDate={startOfToday()}
                 onChange={handlePickerChange('date')}
               />
             ) : null}
@@ -173,6 +212,7 @@ export function AddSleepSheet({ visible, onClose, onSubmit }: AddSleepSheetProps
               label="SLEEP TIME"
               value={formatTime12hFromDate(form.sleepTime)}
               active={activePicker === 'sleep'}
+              error={fieldErrors.sleepTime}
               onPress={() => setActivePicker('sleep')}
             />
             {showIosInlinePicker && activePicker === 'sleep' ? (
@@ -188,6 +228,7 @@ export function AddSleepSheet({ visible, onClose, onSubmit }: AddSleepSheetProps
               label="WAKE TIME"
               value={formatTime12hFromDate(form.wakeTime)}
               active={activePicker === 'wake'}
+              error={fieldErrors.wakeTime}
               onPress={() => setActivePicker('wake')}
             />
             {showIosInlinePicker && activePicker === 'wake' ? (
@@ -199,21 +240,30 @@ export function AddSleepSheet({ visible, onClose, onSubmit }: AddSleepSheetProps
               />
             ) : null}
 
-            <Text style={styles.duration}>
-              Duration: <Text style={styles.durationValue}>{durationLabel}</Text>
-            </Text>
+            <View style={styles.durationBlock}>
+              <Text style={styles.duration}>
+                Duration: <Text style={styles.durationValue}>{durationLabel}</Text>
+              </Text>
+              {fieldErrors.duration ? (
+                <Text style={styles.fieldError}>{fieldErrors.duration}</Text>
+              ) : null}
+            </View>
 
             <View style={styles.fieldBlock}>
-              <Text style={styles.fieldLabel}>NOTES (OPTIONAL)</Text>
+              <Text style={styles.fieldLabel}>NOTES</Text>
               <TextInput
-                style={styles.notesInput}
+                style={[styles.notesInput, fieldErrors.notes ? styles.fieldInputError : null]}
                 placeholder="e.g. woke once at 3am..."
                 placeholderTextColor={colors.inputPlaceholder}
                 value={form.notes}
-                onChangeText={(text) => setForm((current) => ({ ...current, notes: text }))}
+                onChangeText={(text) => {
+                  clearFieldError('notes');
+                  setForm((current) => ({ ...current, notes: text }));
+                }}
                 multiline
                 textAlignVertical="top"
               />
+              {fieldErrors.notes ? <Text style={styles.fieldError}>{fieldErrors.notes}</Text> : null}
             </View>
           </ScrollView>
 
@@ -230,6 +280,7 @@ export function AddSleepSheet({ visible, onClose, onSubmit }: AddSleepSheetProps
         <DateTimePicker
           value={pickerValue}
           mode={pickerMode}
+          maximumDate={activePicker === 'date' ? startOfToday() : undefined}
           onChange={handlePickerChange(activePicker)}
         />
       ) : null}
@@ -298,15 +349,25 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accentLavender,
     borderColor: colors.accentLavenderBorder,
   },
+  fieldInputError: {
+    borderColor: colors.error,
+  },
   fieldValue: {
     fontSize: 16,
     color: colors.textPrimary,
     flex: 1,
   },
+  fieldError: {
+    marginTop: 6,
+    fontSize: 13,
+    color: colors.error,
+  },
+  durationBlock: {
+    marginBottom: 16,
+  },
   duration: {
     fontSize: 14,
     color: colors.textSecondary,
-    marginBottom: 16,
   },
   durationValue: {
     fontWeight: '600',

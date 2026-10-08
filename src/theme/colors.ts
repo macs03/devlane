@@ -16,4 +16,5 @@ export const colors = {
   fieldBorder: '#E8E8ED',
   fieldLabel: '#9B9BA8',
   inputPlaceholder: '#AEAEB8',
+  error: '#C62828',
 } as const;
