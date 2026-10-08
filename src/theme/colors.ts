@@ -11,4 +11,9 @@ export const colors = {
   divider: '#E5E5EA',
   profilePillBackground: '#EDE9F7',
   profilePillText: '#5B4FD9',
+  sheetOverlay: 'rgba(26, 26, 26, 0.45)',
+  fieldBackground: '#F5F5F7',
+  fieldBorder: '#E8E8ED',
+  fieldLabel: '#9B9BA8',
+  inputPlaceholder: '#AEAEB8',
 } as const;
