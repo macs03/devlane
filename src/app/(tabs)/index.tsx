@@ -7,20 +7,15 @@ import { AddSleepSheet } from '@/components/home/AddSleepSheet';
 import { EmptySleepState } from '@/components/home/EmptySleepState';
 import { HomeHeader } from '@/components/home/HomeHeader';
 import { SleepEntryRow } from '@/components/home/SleepEntryRow';
-import { mockSleepEntries } from '@/data/mockSleepEntries';
-import type { SleepEntry } from '@/types/sleepEntry';
+import { useSleepEntries } from '@/context/SleepEntriesContext';
 import { colors } from '@/theme/colors';
 
 const LIST_BOTTOM_PADDING = 96;
 
 export default function HomeScreen() {
-  const [entries, setEntries] = useState<SleepEntry[]>(mockSleepEntries);
+  const { entries, addEntry } = useSleepEntries();
   const [sheetVisible, setSheetVisible] = useState(false);
   const hasEntries = entries.length > 0;
-
-  const handleAddEntry = (entry: SleepEntry) => {
-    setEntries((current) => [entry, ...current]);
-  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
@@ -41,7 +36,7 @@ export default function HomeScreen() {
         <AddSleepSheet
           visible={sheetVisible}
           onClose={() => setSheetVisible(false)}
-          onSubmit={handleAddEntry}
+          onSubmit={addEntry}
         />
       </View>
     </SafeAreaView>
